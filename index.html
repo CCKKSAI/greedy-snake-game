@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>炫彩贪吃蛇 - 双端版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>炫彩贪吃蛇 - 多平台版</title>
     <style>
         body {
             margin: 0;
@@ -16,7 +16,6 @@
             align-items: center;
             height: 100vh;
             overflow: hidden;
-            touch-action: none;
         }
         
         #game-container {
@@ -47,7 +46,6 @@
             border: 2px solid rgba(0, 255, 204, 0.5);
             max-width: 100%;
             height: auto;
-            display: block;
         }
         
         #controls {
@@ -96,38 +94,6 @@
             max-width: 400px;
         }
         
-        /* 手机虚拟摇杆样式 */
-        #joystick-container {
-            position: fixed;
-            bottom: 50px;
-            left: 50px;
-            width: 120px;
-            height: 120px;
-            display: none;
-            z-index: 50;
-        }
-        
-        #joystick-base {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-        }
-        
-        #joystick-handle {
-            position: absolute;
-            width: 50%;
-            height: 50%;
-            background-color: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            top: 25%;
-            left: 25%;
-            transition: transform 0.1s;
-        }
-        
-        /* 响应式设计 */
         @media (max-width: 600px) {
             #header {
                 flex-direction: column;
@@ -148,11 +114,6 @@
             .btn {
                 width: 80%;
             }
-            
-            /* 手机上显示虚拟摇杆 */
-            #joystick-container {
-                display: block;
-            }
         }
     </style>
 </head>
@@ -171,13 +132,6 @@
         </div>
     </div>
     
-    <!-- 虚拟摇杆 -->
-    <div id="joystick-container">
-        <div id="joystick-base"></div>
-        <div id="joystick-handle"></div>
-    </div>
-    
-    <!-- 游戏结束弹窗 -->
     <div id="gameOverModal" class="game-over-modal">
         <div class="game-over-content">
             <h2 style="color: #ff0077; margin-top: 0;">游戏结束!</h2>
@@ -205,8 +159,7 @@
                 '#FF4500', '#DA70D6', '#1E90FF', '#32CD32',
                 '#FF69B4', '#9370DB', '#00FA9A', '#FF8C00',
                 '#7CFC00', '#20B2AA', '#9932CC', '#FF6347'
-            ],
-            joystickRadius: 60 // 摇杆活动半径
+            ]
         };
 
         // 游戏状态
@@ -226,18 +179,11 @@
             lastUpdateTime: 0,
             animationId: null,
             colorQueue: [],
-            tileCount: 0,
-            isMobile: false,
-            joystickActive: false,
-            joystickStartPos: { x: 0, y: 0 },
-            joystickCurrentPos: { x: 0, y: 0 }
+            tileCount: 0
         };
 
         // 初始化游戏
         function initGame() {
-            // 检测是否是移动设备
-            state.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
             state.canvas = document.getElementById(config.canvasId);
             state.ctx = state.canvas.getContext('2d');
             state.tileCount = state.canvas.width / config.gridSize;
@@ -251,11 +197,6 @@
             
             // 设置控制
             setupControls();
-            
-            // 如果是移动设备，初始化虚拟摇杆
-            if(state.isMobile) {
-                setupJoystick();
-            }
         }
 
         // 调整画布大小
@@ -377,34 +318,6 @@
             
             const deltaTime = currentTime - state.lastUpdateTime;
             
-            // 更新方向（如果是移动设备且摇杆激活，则使用摇杆方向）
-            if(state.isMobile && state.joystickActive) {
-                const dx = state.joystickCurrentPos.x - state.joystickStartPos.x;
-                const dy = state.joystickCurrentPos.y - state.joystickStartPos.y;
-                
-                // 计算摇杆角度
-                const angle = Math.atan2(dy, dx);
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                // 只有当摇杆移动一定距离后才改变方向
-                if(distance > 20) {
-                    // 根据角度确定方向
-                    if(Math.abs(dx) > Math.abs(dy)) {
-                        if(dx > 0 && state.direction.x === 0) {
-                            state.nextDirection = {x: 1, y: 0}; // 右
-                        } else if(dx < 0 && state.direction.x === 0) {
-                            state.nextDirection = {x: -1, y: 0}; // 左
-                        }
-                    } else {
-                        if(dy > 0 && state.direction.y === 0) {
-                            state.nextDirection = {x: 0, y: 1}; // 下
-                        } else if(dy < 0 && state.direction.y === 0) {
-                            state.nextDirection = {x: 0, y: -1}; // 上
-                        }
-                    }
-                }
-            }
-            
             state.direction = {...state.nextDirection};
             
             if(deltaTime >= state.currentSpeed) {
@@ -487,65 +400,6 @@
             state.animationId = requestAnimationFrame(update);
         }
 
-        // 设置虚拟摇杆
-        function setupJoystick() {
-            const joystickContainer = document.getElementById('joystick-container');
-            const joystickHandle = document.getElementById('joystick-handle');
-            const joystickBase = document.getElementById('joystick-base');
-            
-            // 获取摇杆基础位置
-            const baseRect = joystickBase.getBoundingClientRect();
-            state.joystickStartPos = {
-                x: baseRect.left + baseRect.width / 2,
-                y: baseRect.top + baseRect.height / 2
-            };
-            
-            // 触摸开始
-            joystickContainer.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                state.joystickActive = true;
-                updateJoystickPosition(e.touches[0].clientX, e.touches[0].clientY);
-            });
-            
-            // 触摸移动
-            joystickContainer.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if(state.joystickActive) {
-                    updateJoystickPosition(e.touches[0].clientX, e.touches[0].clientY);
-                }
-            });
-            
-            // 触摸结束
-            joystickContainer.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                state.joystickActive = false;
-                joystickHandle.style.transform = 'translate(0, 0)';
-            });
-            
-            // 更新摇杆位置
-            function updateJoystickPosition(touchX, touchY) {
-                // 计算相对于摇杆中心的偏移
-                let dx = touchX - state.joystickStartPos.x;
-                let dy = touchY - state.joystickStartPos.y;
-                
-                // 限制摇杆移动范围
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                if(distance > config.joystickRadius) {
-                    dx = dx * config.joystickRadius / distance;
-                    dy = dy * config.joystickRadius / distance;
-                }
-                
-                // 更新摇杆手柄位置
-                joystickHandle.style.transform = `translate(${dx}px, ${dy}px)`;
-                
-                // 保存当前摇杆位置
-                state.joystickCurrentPos = {
-                    x: state.joystickStartPos.x + dx,
-                    y: state.joystickStartPos.y + dy
-                };
-            }
-        }
-
         // 设置控制
         function setupControls() {
             // 键盘控制
@@ -588,14 +442,8 @@
             document.getElementById('modalRestartBtn').addEventListener('click', resetGame);
             
             // 触摸控制（移动设备）
-            if(state.isMobile) {
-                // 禁用默认触摸行为
-                document.addEventListener('touchmove', (e) => {
-                    if(state.joystickActive) {
-                        e.preventDefault();
-                    }
-                }, { passive: false });
-            }
+            state.canvas.addEventListener('touchstart', handleTouchStart);
+            state.canvas.addEventListener('touchmove', handleTouchMove);
         }
 
         // 暂停/继续
@@ -609,6 +457,45 @@
             } else {
                 cancelAnimationFrame(state.animationId);
             }
+        }
+
+        // 触摸控制
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        function handleTouchStart(e) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }
+        
+        function handleTouchMove(e) {
+            if(!touchStartX || !touchStartY || state.isPaused || state.isGameOver) return;
+            
+            const touchEndX = e.touches[0].clientX;
+            const touchEndY = e.touches[0].clientY;
+            
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+            
+            if(Math.abs(dx) > Math.abs(dy)) {
+                // 水平滑动
+                if(dx > 0 && state.direction.x === 0) {
+                    state.nextDirection = {x: 1, y: 0}; // 右
+                } else if(dx < 0 && state.direction.x === 0) {
+                    state.nextDirection = {x: -1, y: 0}; // 左
+                }
+            } else {
+                // 垂直滑动
+                if(dy > 0 && state.direction.y === 0) {
+                    state.nextDirection = {x: 0, y: 1}; // 下
+                } else if(dy < 0 && state.direction.y === 0) {
+                    state.nextDirection = {x: 0, y: -1}; // 上
+                }
+            }
+            
+            touchStartX = 0;
+            touchStartY = 0;
+            e.preventDefault();
         }
 
         // 初始化游戏
